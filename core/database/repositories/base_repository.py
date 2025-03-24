@@ -1,13 +1,16 @@
 from typing import List, Dict, Any, Optional, TypeVar, Generic
 from bson import ObjectId
 from pydantic import BaseModel
-from core.database.connection import get_database
+from core.database.connection import db
 
 T = TypeVar('T', bound=BaseModel)
 
 class BaseRepository:
     def __init__(self, collection_name: str):
-        self.db = get_database()
+        # Instead of calling get_database() which is now async, use db.client directly
+        if db.client is None:
+            raise ConnectionError("Database connection not established")
+        self.db = db.client[db.db_name]
         self.collection = self.db[collection_name]
     
     async def find_one(self, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
