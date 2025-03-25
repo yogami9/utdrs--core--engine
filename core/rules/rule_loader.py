@@ -1,8 +1,12 @@
+from core.rules.predefined.rules import load_rules_to_database
+
 from typing import Dict, List, Any, Optional
 from core.database.repositories.rule_repository import RuleRepository
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+async def load_predefined_rules(self):
+    await load_rules_to_database(self)
 
 class RuleManager:
     def __init__(self):
