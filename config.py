@@ -1,3 +1,4 @@
+# config.py
 import os
 from pydantic import BaseSettings, Field
 from typing import Optional
@@ -20,6 +21,25 @@ class Settings(BaseSettings):
     MODEL_PATH: str = "ml_models"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    
+    # YARA Rules
+    YARA_RULES_PATH: str = "rules/yara"
+    
+    # Threat Intelligence
+    TI_CACHE_PATH: str = "cache/threat_intel"
+    TI_CACHE_EXPIRY: int = 86400  # 24 hours in seconds
+    
+    # External API Keys (optional)
+    VIRUSTOTAL_API_KEY: Optional[str] = None
+    ABUSEIPDB_API_KEY: Optional[str] = None
+    OTX_API_KEY: Optional[str] = None
+    
+    # Advanced Detection Settings
+    ENABLE_YARA: bool = True
+    ENABLE_THREAT_INTEL: bool = True
+    ENABLE_CORRELATION: bool = True
+    CORRELATION_WINDOW: int = 60  # minutes
+    ANOMALY_BASELINE_DAYS: int = 7
     
     class Config:
         env_file = ".env"
