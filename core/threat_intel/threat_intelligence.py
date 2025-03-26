@@ -390,15 +390,15 @@ class ThreatIntelligence:
             return "domain"
             
         # Check if it's a URL
-        url_pattern = re.compile(r'^(http|https|ftp)://.*)
+        url_pattern = re.compile(r'^(http|https|ftp)://.*')
         if url_pattern.match(indicator):
             return "url"
             
         # Check if it's a file hash
         hash_patterns = {
-            "md5": re.compile(r'^[a-fA-F0-9]{32}),
-            "sha1": re.compile(r'^[a-fA-F0-9]{40}),
-            "sha256": re.compile(r'^[a-fA-F0-9]{64})
+            "md5": re.compile(r'^[a-fA-F0-9]{32}'),    # Fixed
+            "sha1": re.compile(r'^[a-fA-F0-9]{40}'),    # Fixed
+            "sha256": re.compile(r'^[a-fA-F0-9]{64}')   # Fixed
         }
         
         for hash_type, pattern in hash_patterns.items():
