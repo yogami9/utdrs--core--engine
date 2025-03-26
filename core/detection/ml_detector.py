@@ -110,6 +110,34 @@ class MLDetector:
             logger.error(f"Error in phishing detection: {str(e)}")
             
         return None
+    
+    def _extract_email_features(self, event: Dict[str, Any]) -> List[float]:
+        """
+        Extract features from an email event for phishing detection.
+        
+        Args:
+            event: The email event
+            
+        Returns:
+            List of numerical features
+        """
+        # In a real implementation, this would extract and process various email features
+        # For demonstration, we'll return a simple placeholder feature vector
+        return [0.5, 0.3, 0.7, 0.2, 0.1]
+    
+    def _extract_url_features(self, event: Dict[str, Any]) -> List[float]:
+        """
+        Extract features from a URL event for phishing detection.
+        
+        Args:
+            event: The URL event
+            
+        Returns:
+            List of numerical features
+        """
+        # In a real implementation, this would extract and process various URL features
+        # For demonstration, we'll return a simple placeholder feature vector
+        return [0.6, 0.4, 0.3, 0.8, 0.2]
         
     async def _simulate_phishing_detection(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -252,4 +280,241 @@ class MLDetector:
             # Process with suspicious command line
             cmdline = event_data.get('command_line', '').lower()
             if any(susp in cmdline for susp in [
-                'powershell -enc', 'rundll32', 'regsvr32', 'bitsadmin', '
+                'powershell -enc', 'rundll32', 'regsvr32', 'bitsadmin', 'wscript', 
+                'mshta', 'certutil -decode', 'iex(', 'invoke-expression', 'bypass'
+            ]):
+                score += 0.3
+                
+            # Process accessing system directories
+            accessed_files = event_data.get('accessed_files', [])
+            if any('/system32/' in file.lower() or '\\system32\\' in file.lower() for file in accessed_files):
+                score += 0.1
+                
+        # File events that may indicate malware
+        elif 'file' in event.get('event_type', ''):
+            # Suspicious file extensions
+            filepath = event_data.get('filepath', '').lower()
+            suspicious_extensions = ['.exe', '.dll', '.ps1', '.vbs', '.js', '.hta', '.bat', '.cmd']
+            if any(filepath.endswith(ext) for ext in suspicious_extensions):
+                score += 0.1
+                
+            # Files in suspicious locations
+            suspicious_locations = ['\\temp\\', '\\downloads\\', '\\appdata\\', '\\recycle']
+            if any(loc in filepath for loc in suspicious_locations):
+                score += 0.1
+                
+            # File operations indicative of ransomware
+            operation = event_data.get('operation', '')
+            if operation == 'rename' and any(ext in filepath for ext in ['.encrypted', '.locked', '.crypt', '.crypted']):
+                score += 0.4
+                
+            # Check for file hash against known malware hashes
+            file_hash = event_data.get('file_hash', '')
+            # In a real system, we would check against a database of known malware hashes
+            known_malware_hashes = []  # Placeholder
+            if file_hash in known_malware_hashes:
+                score += 0.5
+                
+        # If score meets threshold, return detection
+        if score > self.confidence_threshold:
+            severity = "critical" if score > 0.9 else "high" if score > 0.7 else "medium"
+            
+            # Determine if this is likely ransomware
+            is_ransomware = False
+            if 'file' in event.get('event_type', '') and event_data.get('operation', '') == 'rename' and \
+               any(ext in event_data.get('filepath', '').lower() for ext in ['.encrypted', '.locked', '.crypt']):
+                is_ransomware = True
+                
+            if is_ransomware:
+                return {
+                    "name": "Potential Ransomware Activity",
+                    "description": f"ML model detected ransomware indicators with {score*100:.1f}% confidence",
+                    "severity": "critical",
+                    "detection_type": "ml",
+                    "model": "ransomware_detector_simulated",
+                    "confidence": score,
+                    "tags": ["ransomware", "file-encryption", "ml-detection"],
+                    "mitre_techniques": ["T1486"],  # Data Encrypted for Impact
+                    "mitre_tactics": ["TA0040"]     # Impact
+                }
+            else:
+                return {
+                    "name": "Potential Malware Activity",
+                    "description": f"ML model detected malware indicators with {score*100:.1f}% confidence",
+                    "severity": severity,
+                    "detection_type": "ml",
+                    "model": "malware_detector_simulated",
+                    "confidence": score,
+                    "tags": ["malware", "ml-detection"],
+                    "mitre_techniques": ["T1059"],  # Command and Scripting Interpreter
+                    "mitre_tactics": ["TA0002"]     # Execution
+                }
+                
+        return None
+        
+    async def _run_network_anomaly_detection(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Run network anomaly detection on network events.
+        
+        Args:
+            event: The event to analyze
+            
+        Returns:
+            Detection result if network anomaly is detected, None otherwise
+        """
+        event_data = event.get('data', {})
+        
+        # In a real implementation, we would:
+        # 1. Extract network traffic patterns and features
+        # 2. Apply trained anomaly detection models
+        # 3. Compare with baseline network behavior
+        
+        # For demonstration, we'll use a simple rule-based simulation
+        score = 0.0
+        
+        # Check traffic volume
+        bytes_sent = event_data.get('bytes_sent', 0)
+        bytes_received = event_data.get('bytes_received', 0)
+        
+        # Large data transfers could indicate data exfiltration
+        if bytes_sent > 10000000:  # 10 MB
+            score += 0.3
+            
+        # Unusual ports or protocols
+        dst_port = event_data.get('dst_port', 0)
+        protocol = event_data.get('protocol', '').lower()
+        
+        unusual_ports = [4444, 8888, 31337, 1337, 6666, 12345, 54321]
+        if dst_port in unusual_ports:
+            score += 0.2
+            
+        # Check for unusual protocol usage
+        if protocol == 'icmp' and bytes_sent > 1000:  # ICMP tunneling
+            score += 0.3
+            
+        # Check for scanning behavior (multiple connections in short time)
+        connection_count = event_data.get('connection_count', 1)
+        if connection_count > 10:
+            score += 0.2
+            
+        # Check for connections to known malicious IPs
+        dst_ip = event_data.get('dst_ip', '')
+        # In a real system, we would check against threat intelligence data
+        malicious_ips = []  # Placeholder
+        if dst_ip in malicious_ips:
+            score += 0.5
+            
+        # Check for DNS exfiltration indicators
+        if protocol == 'dns':
+            dns_query = event_data.get('dns_query', '')
+            if len(dns_query) > 50:  # Long DNS query could be data exfiltration
+                score += 0.2
+                
+        # If score meets threshold, return detection
+        if score > self.confidence_threshold:
+            severity = "high" if score > 0.9 else "medium"
+            
+            # Determine likely attack type
+            if bytes_sent > 10000000:
+                attack_type = "Data Exfiltration"
+                techniques = ["T1048"]  # Exfiltration Over Alternative Protocol
+                tactics = ["TA0010"]    # Exfiltration
+            elif connection_count > 10:
+                attack_type = "Network Scanning"
+                techniques = ["T1046"]  # Network Service Scanning
+                tactics = ["TA0007"]    # Discovery
+            elif protocol == 'dns' and len(event_data.get('dns_query', '')) > 50:
+                attack_type = "DNS Tunneling"
+                techniques = ["T1071.004"]  # Application Layer Protocol: DNS
+                tactics = ["TA0011"]        # Command and Control
+            else:
+                attack_type = "Suspicious Network Activity"
+                techniques = ["T1071"]      # Application Layer Protocol
+                tactics = ["TA0011"]        # Command and Control
+            
+            return {
+                "name": f"Potential {attack_type}",
+                "description": f"ML model detected network anomaly with {score*100:.1f}% confidence",
+                "severity": severity,
+                "detection_type": "ml",
+                "model": "network_anomaly_detector_simulated",
+                "confidence": score,
+                "tags": ["network", "anomaly", "ml-detection"],
+                "mitre_techniques": techniques,
+                "mitre_tactics": tactics
+            }
+                
+        return None
+        
+    async def _run_user_behavior_detection(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Run user behavior anomaly detection on authentication or user events.
+        
+        Args:
+            event: The event to analyze
+            
+        Returns:
+            Detection result if user behavior anomaly is detected, None otherwise
+        """
+        event_data = event.get('data', {})
+        
+        # In a real implementation, we would:
+        # 1. Build user behavior profiles based on historical activity
+        # 2. Apply anomaly detection to current behavior
+        # 3. Calculate anomaly scores for different dimensions of behavior
+        
+        # For demonstration, we'll use a simple rule-based simulation
+        score = 0.0
+        
+        # Extract user information
+        user_id = event_data.get('user_id', '')
+        timestamp = datetime.fromisoformat(event.get('timestamp', datetime.utcnow().isoformat()))
+        action = event_data.get('action', '')
+        source_ip = event_data.get('source_ip', '')
+        
+        # Check for activity at unusual hours
+        hour = timestamp.hour
+        if hour < 6 or hour > 22:  # Activity outside normal business hours
+            score += 0.2
+            
+        # Check for access from unusual location
+        # In a real system, we would have a list of usual locations for each user
+        usual_ips = []  # Placeholder
+        if source_ip and source_ip not in usual_ips:
+            score += 0.2
+            
+        # Check for unusual account activities
+        sensitive_actions = ['password_change', 'permission_change', 'user_create', 'group_add']
+        if action in sensitive_actions:
+            score += 0.2
+            
+        # Check for unusual resource access
+        resource = event_data.get('resource', '')
+        sensitive_resources = ['admin_panel', 'user_database', 'financial_reports', 'source_code']
+        if any(res in resource for res in sensitive_resources):
+            score += 0.2
+            
+        # Check for rapid succession of actions
+        # In a real system, we would track action frequency and timing patterns
+        action_count = event_data.get('action_count', 1)
+        time_window = event_data.get('time_window', 60)  # seconds
+        if action_count > 5 and time_window < 60:
+            score += 0.3
+            
+        # If score meets threshold, return detection
+        if score > self.confidence_threshold:
+            severity = "high" if score > 0.9 else "medium"
+            
+            return {
+                "name": "Unusual User Behavior",
+                "description": f"ML model detected user behavior anomaly for user {user_id} with {score*100:.1f}% confidence",
+                "severity": severity,
+                "detection_type": "ml",
+                "model": "user_behavior_detector_simulated",
+                "confidence": score,
+                "tags": ["user", "anomaly", "insider-threat", "ml-detection"],
+                "mitre_techniques": ["T1078"],  # Valid Accounts
+                "mitre_tactics": ["TA0004"]     # Privilege Escalation
+            }
+                
+        return None
