@@ -738,7 +738,7 @@ class ThreatIntelligence:
             
     def _is_valid_domain(self, domain):
         """Check if a domain is valid."""
-        domain_pattern = re.compile(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)
+        domain_pattern = re.compile(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$')
         return bool(domain_pattern.match(domain))
         
     def _is_valid_url(self, url):
