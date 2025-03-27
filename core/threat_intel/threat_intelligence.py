@@ -743,15 +743,16 @@ class ThreatIntelligence:
         
     def _is_valid_url(self, url):
         """Check if a URL is valid."""
-        url_pattern = re.compile(r'^(?:http|https|ftp)://.*)
+        url_pattern = re.compile(r'^(?:http|https|ftp)://.*')
         return bool(url_pattern.match(url))
         
     def _is_valid_hash(self, hash_str):
         """Check if a string is a valid hash."""
         hash_patterns = {
-            "md5": re.compile(r'^[a-fA-F0-9]{32}),
-            "sha1": re.compile(r'^[a-fA-F0-9]{40}),
-            "sha256": re.compile(r'^[a-fA-F0-9]{64})
+            "md5": re.compile(r'^[a-fA-F0-9]{32}$'),
+            "sha1": re.compile(r'^[a-fA-F0-9]{40}$'),
+            "sha256": re.compile(r'^[a-fA-F0-9]{64}$')
+         
         }
         
         for hash_type, pattern in hash_patterns.items():
